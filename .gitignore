@@ -1,0 +1,21 @@
+# Настройки IDE PyCharm
+.idea/
+
+# Секреты и настройки Streamlit
+.streamlit/config.toml
+.streamlit/secrets.toml
+
+# Окружение Python (зависит от того, как вы его назвали)
+venv/
+.venv/
+env/
+
+# Кэш Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Логи и временные файлы
+*.log
+.DS_Store
