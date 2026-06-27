@@ -1,6 +1,7 @@
 import streamlit as st
 from frontend.pages import pages
 
+
 hub = st.session_state.hub
 with st.container(border=True):
     st.title("Sign up")

@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 import bcrypt
+
+
 @dataclass
 class User:
   username: str
