@@ -19,3 +19,5 @@ __pycache__/
 # Логи и временные файлы
 *.log
 .DS_Store
+"check_connection.py" 
+".env" 

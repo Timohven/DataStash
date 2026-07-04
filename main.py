@@ -1,5 +1,5 @@
 import streamlit as st
-from backend.hub import Hub
+from core.hub import Hub
 from core.db.sqlalchemy_db import Database
 from frontend.pages import pages
 
