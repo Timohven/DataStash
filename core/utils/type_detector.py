@@ -8,6 +8,7 @@ class NoteType:
     PHOTO = 'photo'
     FILE  = 'file'
     VIDEO = 'video'
+    PDF   = 'pdf'
 
 # Расширения фото
 PHOTO_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.bmp'}
@@ -16,7 +17,10 @@ PHOTO_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.bmp'}
 VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v'}
 
 # Расширения файлов (не фото/видео)
-FILE_EXTENSIONS  = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.zip', '.txt', '.mp3'}
+FILE_EXTENSIONS = {'.doc', '.docx', '.xls', '.xlsx', '.zip', '.txt', '.mp3'}
+
+# Расширения pdf
+PDF_EXTENSIONS = {'.pdf'}
 
 URL_PATTERN = re.compile(
     r'^(https?://)'           # http:// или https://
@@ -41,6 +45,8 @@ def detect_type(text: str = None, filename: str = None) -> str:
             return NoteType.PHOTO
         if ext in VIDEO_EXTENSIONS:
             return NoteType.VIDEO
+        if ext in PDF_EXTENSIONS:
+            return NoteType.PDF
         return NoteType.FILE  # всё остальное — файл
 
     # Если есть текст — проверяем на ссылку
