@@ -21,3 +21,4 @@ __pycache__/
 .DS_Store
 "check_connection.py" 
 ".env" 
+".env" 
