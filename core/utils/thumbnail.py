@@ -8,14 +8,15 @@ import os
 from pathlib import Path
 from PIL import Image
 
+from core.config import THUMBNAIL_DIR
+
+
 THUMBNAIL_SIZE = (200, 200)  # размер превью в пикселях
-THUMBNAIL_DIR = os.environ.get('UPLOAD_DIR', './uploads') + '/thumbnails'
 
 
 def get_thumbnail_path(original_path: str) -> str:
-    """Возвращает путь к превью для данного файла."""
-    filename = Path(original_path).stem  # имя без расширения
-    return os.path.join(THUMBNAIL_DIR, f'{filename}.jpg')
+    filename = Path(original_path).stem
+    return str(THUMBNAIL_DIR / f'{filename}.jpg')
 
 
 def generate_thumbnail(file_path: str, note_type: str) -> str | None:

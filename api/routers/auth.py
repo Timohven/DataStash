@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from api.dependencies import get_hub
 from api.middleware.auth import create_access_token
 from api.schemas.auth import TokenResponse
+
 from core.hub import Hub
 
 router = APIRouter(prefix="/auth", tags=["auth"])

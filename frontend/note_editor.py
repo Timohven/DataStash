@@ -2,26 +2,103 @@ import streamlit as st
 
 
 # Define your options matching the DB constraints
-type_options = ['text', 'ref', 'pic', 'pdf', 'video']
+TYPE_OPTIONS = ['text', 'link', 'photo', 'file', 'video', 'pdf']
 
 hub = st.session_state.hub
+
+
 @st.dialog("Note editor", width="large")
 def note_editor(hub, user, note=None):
-    # Find where the stored type lives in the list (default to 0 if not found)
     if note:
-        default_index = type_options.index(note.note_type) if note.note_type in type_options else 0
-    else:
-        default_index = 0
-    note_type = st.selectbox('Chose a note type', options=['text', 'ref', 'pic', 'pdf', 'video'], index=default_index)
-    default_text = note.text if note else ''
-    note_text = st.text_area('Enter a note', value=default_text)
-    if st.button('Save note', type='primary'):
-        if note:
+        # Редактирование существующей заметки — как раньше
+        if note.note_type in {'photo', 'video', 'pdf', 'file'}:
+            st.caption(f'Тип заметки: **{note.note_type}** (нельзя изменить)')
+            note_type = note.note_type
+        else:
+            note_type = st.selectbox(
+                'Тип заметки',
+                options=['text', 'link'],
+                index=['text', 'link'].index(note.note_type) if note.note_type in ['text', 'link'] else 0,
+            )
+
+        default_text = note.text if note else ''
+        note_text = st.text_area('Текст заметки', value=default_text, height=200)
+
+        if st.button('Сохранить', type='primary'):
             new_note = hub.note_service.update_note(note.note_id, note_type, note_text)
-        else:
-            new_note = hub.note_service.create_note(user.username, note_type, note_text)
-        if new_note:
-            st.success('Note saved successfully!')
-            st.rerun()
-        else:
-            st.error('Failed to save note')
+            if new_note:
+                st.success('Заметка сохранена!')
+                st.rerun()
+            else:
+                st.error('Ошибка при сохранении')
+    else:
+        # Создание новой заметки
+        tab_text, tab_file = st.tabs(['📝 Текст', '📎 Файл'])
+
+        with tab_text:
+            note_type = st.selectbox('Тип', options=['text', 'link'])
+            note_text = st.text_area('Текст заметки', height=200)
+
+            if st.button('Сохранить', type='primary', key='save_text'):
+                if note_text.strip():
+                    new_note = hub.note_service.create_note(user.username, note_type, note_text)
+                    if new_note:
+                        st.success('Заметка сохранена!')
+                        st.rerun()
+                    else:
+                        st.error('Ошибка при сохранении')
+                else:
+                    st.warning('Введите текст заметки')
+
+        with tab_file:
+            uploaded_file = st.file_uploader(
+                'Выберите файл',
+                type=['jpg', 'jpeg', 'png', 'gif', 'webp',  # фото
+                      'mp4', 'mov', 'avi', 'mkv',            # видео
+                      'pdf',                                  # pdf
+                      'doc', 'docx', 'xls', 'xlsx', 'zip'],  # файлы
+            )
+
+            if uploaded_file:
+                # Показываем превью для фото
+                if uploaded_file.type.startswith('image/'):
+                    st.image(uploaded_file, width=200)
+
+                if st.button('Сохранить', type='primary', key='save_file'):
+                    _save_uploaded_file(hub, user, uploaded_file)
+
+
+def _save_uploaded_file(hub, user, uploaded_file):
+    """Сохраняет загруженный файл и создаёт заметку."""
+    import os
+    import shutil
+    from pathlib import Path
+    from core.utils.type_detector import detect_type
+    from core.utils.thumbnail import generate_thumbnail
+    from api.routers.notes import sanitize_filename  # ← переиспользуем функцию
+
+    # upload_dir = os.environ.get('UPLOAD_DIR', './uploads')
+    from core.config import UPLOAD_DIR
+
+    # Определяем тип и санируем имя
+    safe_filename = sanitize_filename(uploaded_file.name)
+    note_type = detect_type(filename=uploaded_file.name)
+
+    # Сохраняем файл
+    type_dir = Path(UPLOAD_DIR) / note_type
+    type_dir.mkdir(parents=True, exist_ok=True)
+    file_path = type_dir / safe_filename
+
+    with open(file_path, 'wb') as f:
+        shutil.copyfileobj(uploaded_file, f)
+
+    # Генерируем превью
+    generate_thumbnail(str(file_path), note_type)
+
+    # Создаём заметку в БД
+    new_note = hub.note_service.create_note(user.username, note_type, str(file_path))
+    if new_note:
+        st.success('Файл сохранён!')
+        st.rerun()
+    else:
+        st.error('Ошибка при сохранении')

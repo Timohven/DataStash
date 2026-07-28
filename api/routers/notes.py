@@ -14,20 +14,23 @@ CRUD для заметок — под реальный NoteService:
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 
+import shutil
+import os
+from pathlib import Path
+
 from api.dependencies import get_hub
 from api.middleware.auth import get_current_username
 from api.schemas.note import NoteCreate, NoteUpdate, NoteResponse
-from core.hub import Hub
+
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-import shutil
-import os
 from fastapi.responses import FileResponse
-from pathlib import Path
+
+from core.hub import Hub
 from core.utils.type_detector import detect_type
 from core.utils.thumbnail import generate_thumbnail, get_thumbnail_path
+from core.utils.file_utils import sanitize_filename
+from core.config import UPLOAD_DIR, TYPE_DIRS
 
-
-UPLOAD_DIR = os.environ.get('UPLOAD_DIR', './uploads')
 router = APIRouter(prefix="/notes", tags=["notes"])
 
 
@@ -55,6 +58,7 @@ async def get_file(
         filename=full_path.name,  # имя файла в заголовке Content-Disposition
     )
 
+
 @router.post("/upload", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
 async def upload_note(
     file: UploadFile = File(...),
@@ -68,11 +72,12 @@ async def upload_note(
     # Определяем тип по имени файла
     note_type = detect_type(filename=file.filename)
 
-    # Сохраняем файл на диск
-    type_dir = os.path.join(UPLOAD_DIR, note_type)   # uploads/photo/ или uploads/file/
-    os.makedirs(type_dir, exist_ok=True)
+    type_dir = TYPE_DIRS[note_type] if note_type in TYPE_DIRS else UPLOAD_DIR / note_type
+    type_dir.mkdir(parents=True, exist_ok=True)
 
-    file_path = os.path.join(type_dir, file.filename)
+    safe_filename = sanitize_filename(file.filename)
+    file_path = type_dir / safe_filename
+
     with open(file_path, 'wb') as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -93,6 +98,7 @@ async def upload_note(
         )
     return note
 
+
 @router.get("/thumbnails/{file_path:path}")
 async def get_thumbnail(
         file_path: str,
@@ -104,6 +110,7 @@ async def get_thumbnail(
         raise HTTPException(status_code=404, detail="Thumbnail not found")
 
     return FileResponse(path=thumbnail_path, media_type='image/jpeg')
+
 
 @router.post("", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
 def create_note(

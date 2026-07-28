@@ -6,7 +6,6 @@ api/dependencies.py
 """
 import os
 from functools import lru_cache
-
 from sqlalchemy import create_engine
 
 from core.hub import Hub
