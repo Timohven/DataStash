@@ -89,7 +89,7 @@ async def upload_note(
     note = hub.note_service.create_note(
         author=username,
         note_type=note_type,
-        note_text=file_path,
+        note_text=str(file_path),
     )
     if note is None:
         raise HTTPException(
