@@ -26,6 +26,37 @@ class NoteService:
         results = self.database.execute_query(query, params)
         return [Note(*row) for row in results]
 
+    def get_notes_by_author_and_tags(self, author: str, tag_names: list[str]) -> list:
+        """
+        Возвращает заметки автора отфильтрованные по тегам.
+        Если tag_names пустой — возвращает все заметки автора.
+        Логика: заметка должна содержать ВСЕ указанные теги (AND).
+        """
+        if not tag_names:
+            print('WRONG TAGS! COUNT:')
+            print(len(tag_names))
+            return self.get_notes_by_author(author)
+
+        query = '''
+            SELECT n.* FROM notes n
+            WHERE n.author = :author
+            AND (
+                SELECT COUNT(DISTINCT t.name)
+                FROM tags t
+                JOIN note_tags nt ON t.tag_id = nt.tag_id
+                WHERE nt.note_id = n.note_id
+                AND t.name = ANY(:tag_names)
+            ) = :tag_count
+            ORDER BY n.created_at DESC
+        '''
+        params = {
+            'author': author,
+            'tag_names': tag_names,
+            'tag_count': len(tag_names),
+        }
+        results = self.database.execute_query(query, params)
+        return [Note(*row) for row in results]
+
     def update_note(self, note_id, note_type, note_text):
         query = '''
             UPDATE notes SET text = :text, note_type = :type WHERE note_id = :id RETURNING * 

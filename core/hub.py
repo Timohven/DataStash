@@ -1,6 +1,7 @@
 from core.db.base import AbstractDatabase
 from core.services.user_service import UserService
 from core.services.note_service import NoteService
+from core.services.tag_service import TagService
 
 
 class Hub:
@@ -8,3 +9,7 @@ class Hub:
         self.database = database
         self.user_service = UserService(database)
         self.note_service = NoteService(database)
+        self.tag_service = TagService(database)
+
+    def dispose(self):
+        self.database.dispose()

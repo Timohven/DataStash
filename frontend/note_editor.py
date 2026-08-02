@@ -7,6 +7,37 @@ TYPE_OPTIONS = ['text', 'link', 'photo', 'file', 'video', 'pdf']
 hub = st.session_state.hub
 
 
+
+def _tag_selector(hub, selected_names: list[str]) -> list[str]:
+    """Виджет выбора тегов — используется и при создании и при редактировании."""
+    all_tags = hub.tag_service.get_all_tags()
+
+    st.markdown('**Теги:**')
+
+    # Поле для нового тега
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        new_tag = st.text_input('Новый тег', placeholder='Введите название...', label_visibility='collapsed')
+    with col2:
+        if st.button('+ Добавить'):
+            if new_tag.strip():
+                hub.tag_service.get_or_create_tag(new_tag.strip())
+                st.rerun()
+
+    # Чекбоксы для всех существующих тегов
+    result = []
+    if all_tags:
+        cols = st.columns(3)  # теги в три колонки
+        for i, tag in enumerate(hub.tag_service.get_all_tags()):
+            with cols[i % 3]:
+                if st.checkbox(tag.name, value=tag.name in selected_names, key=f"new_tag_{tag.tag_id}"):
+                    result.append(tag.name)
+    else:
+        st.caption('Тегов пока нет — создайте первый')
+
+    return result
+
+
 @st.dialog("Note editor", width="large")
 def note_editor(hub, user, note=None):
     if note:
@@ -24,6 +55,13 @@ def note_editor(hub, user, note=None):
         default_text = note.text if note else ''
         note_text = st.text_area('Текст заметки', value=default_text, height=200)
 
+        st.divider()
+
+        # Текущие теги заметки
+        current_tags = hub.tag_service.get_tags_for_note(note.note_id)
+        current_names = [t.name for t in current_tags]
+        selected_names = _tag_selector(hub, current_names)
+
         if st.button('Сохранить', type='primary'):
             new_note = hub.note_service.update_note(note.note_id, note_type, note_text)
             if new_note:
@@ -37,12 +75,16 @@ def note_editor(hub, user, note=None):
 
         with tab_text:
             note_type = st.selectbox('Тип', options=['text', 'link'])
-            note_text = st.text_area('Текст заметки', height=200)
+            note_text = st.text_area('Текст заметки', height=150)
+
+            st.divider()
+            selected_names = _tag_selector(hub, [])
 
             if st.button('Сохранить', type='primary', key='save_text'):
                 if note_text.strip():
                     new_note = hub.note_service.create_note(user.username, note_type, note_text)
                     if new_note:
+                        hub.tag_service.set_tags_for_note(new_note.note_id, selected_names)
                         st.success('Заметка сохранена!')
                         st.rerun()
                     else:
@@ -68,8 +110,8 @@ def note_editor(hub, user, note=None):
                     _save_uploaded_file(hub, user, uploaded_file)
 
 
-def _save_uploaded_file(hub, user, uploaded_file):
-    """Сохраняет загруженный файл и создаёт заметку."""
+def _save_uploaded_file(hub, user, uploaded_file, tag_names: list[str]):
+    """Сохраняет загруженный файл и создаёт заметку с тегами."""
     import os
     import shutil
     from pathlib import Path
@@ -98,6 +140,7 @@ def _save_uploaded_file(hub, user, uploaded_file):
     # Создаём заметку в БД
     new_note = hub.note_service.create_note(user.username, note_type, str(file_path))
     if new_note:
+        hub.tag_service.set_tags_for_note(new_note.note_id, tag_names)
         st.success('Файл сохранён!')
         st.rerun()
     else:

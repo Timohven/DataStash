@@ -93,6 +93,56 @@ def display_file_opener(note):
         st.caption('Файл не найден')
 
 
+def display_tags(note):
+    """Показывает теги заметки и позволяет их редактировать."""
+    tags = hub.tag_service.get_tags_for_note(note.note_id)
+
+    cols = st.columns([6, 1])
+    with cols[0]:
+        if tags:
+            tags_str = ' '.join([f':blue-background[{t.name}]' for t in tags])
+            st.markdown(tags_str)
+        else:
+            st.caption('Нет тегов')
+
+    with cols[1]:
+        if st.button('🏷️', key=f"tags_{note.note_id}", help='Редактировать теги'):
+            tag_editor(hub, note)
+
+
+@st.dialog("Теги заметки", width="small")
+def tag_editor(hub, note):
+    """Диалог редактирования тегов заметки."""
+    all_tags = hub.tag_service.get_all_tags()
+    current_tags = hub.tag_service.get_tags_for_note(note.note_id)
+    current_names = [t.name for t in current_tags]
+
+    # Поле для нового тега
+    new_tag = st.text_input('Новый тег', placeholder='Введите название...')
+    if st.button('Добавить тег', key='add_tag'):
+        if new_tag.strip():
+            hub.tag_service.get_or_create_tag(new_tag.strip())
+            st.rerun()
+
+    st.divider()
+
+    st.markdown('**Выберите теги:**')
+    selected_names = []
+    for tag in hub.tag_service.get_all_tags():
+        checked = st.checkbox(
+            tag.name,
+            value=tag.name in current_names,
+            key=f"tag_check_{note.note_id}_{tag.tag_id}"
+        )
+        if checked:
+            selected_names.append(tag.name)
+
+    if st.button('Сохранить', type='primary'):
+        hub.tag_service.set_tags_for_note(note.note_id, selected_names)
+        st.success('Теги сохранены!')
+        st.rerun()
+
+
 def display_note(note):
     with st.container(border=True):
         if note.note_type in FILE_TYPES:
@@ -129,3 +179,6 @@ def display_note(note):
 
             with delete_col:
                 delete_button(note)
+
+        # Теги — для всех типов заметок
+        display_tags(note)

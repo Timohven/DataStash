@@ -130,10 +130,21 @@ def create_note(
 
 @router.get("", response_model=list[NoteResponse])
 def list_my_notes(
+    tags: str = None,  # теги через запятую: ?tags=работа,важное
     hub: Hub = Depends(get_hub),
     username: str = Depends(get_current_username),
 ):
-    return hub.note_service.get_notes_by_author(username)
+    print(f'RAW TAGS PARAM: "{tags}"')
+    tag_names = [t.strip() for t in tags.split(',')] if tags else []
+    notes = hub.note_service.get_notes_by_author_and_tags(username, tag_names)
+    print(f'FILTERED COUNT: {len(notes)}')
+    return notes
+# @router.get("", response_model=list[NoteResponse])
+# def list_my_notes(
+#     hub: Hub = Depends(get_hub),
+#     username: str = Depends(get_current_username),
+# ):
+#     return hub.note_service.get_notes_by_author(username)
 
 
 @router.put("/{note_id}", response_model=NoteResponse)
